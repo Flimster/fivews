@@ -44,14 +44,4 @@ impl WAL {
             })
             .collect()
     }
-
-    pub fn get_wal_size(&mut self) -> std::io::Result<u64> {
-        let metadata = self.f.metadata()?;
-        Ok(metadata.len())
-    }
-
-    pub fn clear_logs(&mut self) -> std::io::Result<()> {
-        self.f.set_len(0)?;
-        Ok(())
-    }
 }

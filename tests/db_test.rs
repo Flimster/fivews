@@ -86,7 +86,7 @@ fn test_large_number_of_writes() {
     let db = FiveWsDB::new(TESTS_DIR_PATH);
 
     let number_of_threads = 10;
-    let number_of_writes = 10000;
+    let number_of_writes = 1000;
 
     let thread_safe_db = Arc::new(RwLock::new(db));
 
@@ -95,8 +95,9 @@ fn test_large_number_of_writes() {
             let db_clone = thread_safe_db.clone();
             thread::spawn(move || {
                 let mut w = db_clone.write().unwrap();
-                for i in 0..10000 {
-                    w.update(format!("{}-{}", thread_num, i).as_str(), "", "", "", "").unwrap();
+                for i in 0..number_of_writes {
+                    w.update(format!("{}-{}", thread_num, i).as_str(), "", "", "", "")
+                        .unwrap();
                 }
             })
         })
@@ -115,12 +116,34 @@ fn test_large_number_of_writes() {
 }
 
 #[test]
-fn test_checkpoint_creation() {
+fn test_checkpoint_manual_creation() {
     let mut db = FiveWsDB::new(TESTS_DIR_PATH);
 
     db.update("ingi", "", "", "", "").unwrap();
 
     db.create_checkpoint().unwrap();
+
+    let new_checkpoint_exists = std::path::Path::new(format!("{}/checkpoint1.lidb", TESTS_DIR_PATH).as_str()).exists();
+    assert_eq!(new_checkpoint_exists, true);
+    let new_log_exists = std::path::Path::new(format!("{}/log1.lidb", TESTS_DIR_PATH).as_str()).exists();
+    assert_eq!(new_log_exists, true);
+
+    let old_checkpoint_exists = std::path::Path::new(format!("{}/checkpoint0.lidb", TESTS_DIR_PATH).as_str()).exists();
+    assert_eq!(old_checkpoint_exists, false);
+    let old_log_exists = std::path::Path::new(format!("{}/log0.lidb", TESTS_DIR_PATH).as_str()).exists();
+    assert_eq!(old_log_exists, false);
+
+    teardown(TESTS_DIR_PATH);
+}
+
+#[test]
+fn test_checkpoint_automatic_creation() {
+    let mut db = FiveWsDB::new(TESTS_DIR_PATH);
+
+    
+    for _ in 0..500 {
+        db.update("", "", "", "", "").unwrap();
+    }
 
     let new_checkpoint_exists = std::path::Path::new(format!("{}/checkpoint1.lidb", TESTS_DIR_PATH).as_str()).exists();
     assert_eq!(new_checkpoint_exists, true);

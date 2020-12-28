@@ -7,7 +7,6 @@ const DB_PATH: &str = "./lidb";
 #[derive(StructOpt, Debug)]
 #[structopt(name = "cli")]
 
-
 struct Opt {
     #[structopt(subcommand)]
     cmd: Command,
@@ -49,13 +48,7 @@ fn main() {
             } else {
                 time = chrono::Utc::now().to_string();
             }
-            match db.update(
-                who,
-                what,
-                time,
-                r#where,
-                why,
-            ) {
+            match db.update(who, what, time, r#where, why) {
                 Err(e) => eprintln!("{}", e.to_string()),
                 _ => {}
             };

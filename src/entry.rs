@@ -20,7 +20,10 @@ impl FiveWsEntry {
         }
     }
 
-    pub fn from<T>(v: Vec<T>) -> FiveWsEntry where T: Into<String> + Copy {
+    pub fn from<T>(v: Vec<T>) -> FiveWsEntry
+    where
+        T: Into<String> + Copy,
+    {
         FiveWsEntry {
             who: v[0].into(),
             what: v[1].into(),
