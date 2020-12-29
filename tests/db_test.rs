@@ -1,9 +1,14 @@
-use std::sync::{Arc, RwLock};
 use std::thread;
+use std::fmt::Display;
+use std::sync::{Arc, RwLock};
 
 use fivewsdb::db::*;
 
 const TESTS_DIR_PATH: &str = "./tests/lidb";
+
+fn dbfile_exists<T: Into<String> + Display>(directory: T, filename: T) -> bool {
+    std::path::Path::new(format!("{}/{}", directory, filename).as_str()).exists()
+}
 
 pub fn teardown(path: &str) {
     println!("Cleaning files. Path: '{}'", path);
@@ -13,12 +18,42 @@ pub fn teardown(path: &str) {
 }
 
 #[test]
+fn test_database_init() {
+    let _ = FiveWsDB::new(TESTS_DIR_PATH);
+
+    assert_eq!(dbfile_exists(TESTS_DIR_PATH, "log0.lidb"), true);
+    assert_eq!(dbfile_exists(TESTS_DIR_PATH, "checkpoint0.lidb"), true);
+    assert_eq!(dbfile_exists(TESTS_DIR_PATH, "meta"), true);
+
+    teardown(TESTS_DIR_PATH);
+}
+#[test]
+#[should_panic(expected = "Unable to initialize lowiq database: No such file or directory (os error 2)")]
+fn test_database_invalid_init() {
+    let _ = FiveWsDB::new("");
+    // No need to teardown if the database fails to intialize
+}
+
+#[test]
+fn test_database_init_twice() {
+    FiveWsDB::new(TESTS_DIR_PATH);
+    FiveWsDB::new(TESTS_DIR_PATH);
+
+    assert_eq!(dbfile_exists(TESTS_DIR_PATH, "log0.lidb"), true);
+    assert_eq!(dbfile_exists(TESTS_DIR_PATH, "checkpoint0.lidb"), true);
+    assert_eq!(dbfile_exists(TESTS_DIR_PATH, "meta"), true);
+}
+
+#[test]
 fn test_database_update() {
     let mut db = FiveWsDB::new(TESTS_DIR_PATH);
 
-    db.update("Ingi", "Job start", "2020-20-12", "", "").unwrap();
-    db.update("IT guy", "Job start", "2020-20-12", "", "").unwrap();
-    db.update("Office guy", "Job start", "2020-20-12", "", "").unwrap();
+    db.update("Ingi", "Job start", "2020-20-12", "", "")
+        .unwrap();
+    db.update("IT guy", "Job start", "2020-20-12", "", "")
+        .unwrap();
+    db.update("Office guy", "Job start", "2020-20-12", "", "")
+        .unwrap();
 
     let entries = db.read("Ingi");
 
@@ -123,14 +158,14 @@ fn test_checkpoint_manual_creation() {
 
     db.create_checkpoint().unwrap();
 
-    let new_checkpoint_exists = std::path::Path::new(format!("{}/checkpoint1.lidb", TESTS_DIR_PATH).as_str()).exists();
+    let new_checkpoint_exists = dbfile_exists(TESTS_DIR_PATH, "checkpoint1.lidb");
     assert_eq!(new_checkpoint_exists, true);
-    let new_log_exists = std::path::Path::new(format!("{}/log1.lidb", TESTS_DIR_PATH).as_str()).exists();
+    let new_log_exists = dbfile_exists(TESTS_DIR_PATH, "log1.lidb");
     assert_eq!(new_log_exists, true);
 
-    let old_checkpoint_exists = std::path::Path::new(format!("{}/checkpoint0.lidb", TESTS_DIR_PATH).as_str()).exists();
+    let old_checkpoint_exists = dbfile_exists(TESTS_DIR_PATH, "checkpoint0.lidb");
     assert_eq!(old_checkpoint_exists, false);
-    let old_log_exists = std::path::Path::new(format!("{}/log0.lidb", TESTS_DIR_PATH).as_str()).exists();
+    let old_log_exists = dbfile_exists(TESTS_DIR_PATH, "log0.lidb");
     assert_eq!(old_log_exists, false);
 
     teardown(TESTS_DIR_PATH);
@@ -140,19 +175,19 @@ fn test_checkpoint_manual_creation() {
 fn test_checkpoint_automatic_creation() {
     let mut db = FiveWsDB::new(TESTS_DIR_PATH);
 
-    
-    for _ in 0..500 {
+    // Assuming that max log file size is 4096 bytes before creating the checkpoint
+    for _ in 0..1000 {
         db.update("", "", "", "", "").unwrap();
     }
 
-    let new_checkpoint_exists = std::path::Path::new(format!("{}/checkpoint1.lidb", TESTS_DIR_PATH).as_str()).exists();
+    let new_checkpoint_exists = dbfile_exists(TESTS_DIR_PATH, "checkpoint1.lidb");
     assert_eq!(new_checkpoint_exists, true);
-    let new_log_exists = std::path::Path::new(format!("{}/log1.lidb", TESTS_DIR_PATH).as_str()).exists();
+    let new_log_exists = dbfile_exists(TESTS_DIR_PATH, "log1.lidb");
     assert_eq!(new_log_exists, true);
 
-    let old_checkpoint_exists = std::path::Path::new(format!("{}/checkpoint0.lidb", TESTS_DIR_PATH).as_str()).exists();
+    let old_checkpoint_exists = dbfile_exists(TESTS_DIR_PATH, "checkpoint0.lidb");
     assert_eq!(old_checkpoint_exists, false);
-    let old_log_exists = std::path::Path::new(format!("{}/log0.lidb", TESTS_DIR_PATH).as_str()).exists();
+    let old_log_exists = dbfile_exists(TESTS_DIR_PATH, "log0.lidb");
     assert_eq!(old_log_exists, false);
 
     teardown(TESTS_DIR_PATH);

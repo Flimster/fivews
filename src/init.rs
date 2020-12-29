@@ -16,7 +16,10 @@ fn init_files(dir_path: &str, checkpoint: usize) {
         .create_new(true)
         .open(checkpoint_path);
 
-    let _ = fs::OpenOptions::new().write(true).create_new(true).open(log_path);
+    let _ = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(log_path);
 }
 
 pub fn init_lidb(dir_path: &str) -> usize {

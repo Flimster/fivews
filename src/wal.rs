@@ -24,24 +24,19 @@ impl WAL {
 
     // Returns the size of the write-ahead file
     pub fn write(&mut self, entry: &FiveWsEntry) -> io::Result<u64> {
-        self.f.write_all(format!("WRITE{}\n", entry).as_bytes())?;
+        self.f.write_all(format!("{}\n", entry).as_bytes())?;
         let length = self.f.metadata()?.len();
         Ok(length)
     }
 
-    pub fn get_logs(&self) -> Vec<(String, FiveWsEntry)> {
+    pub fn get_logs(&self) -> Vec<FiveWsEntry> {
         let reader = BufReader::new(&self.f);
 
-        // TODO: Handle if logs are not in the correct format
         reader
             .lines()
             .map(|l| l.unwrap_or_default())
             .filter(|l| !l.is_empty())
-            .map(|l| {
-                let operation = l[0..5].to_string();
-                let entry = l[5..].to_string();
-                (operation, FiveWsEntry::from(entry.split("|").collect()))
-            })
+            .map(|l| FiveWsEntry::from(l.split("|").collect()))
             .collect()
     }
 }

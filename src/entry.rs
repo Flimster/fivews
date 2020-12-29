@@ -62,11 +62,11 @@ mod tests {
 
     #[test]
     fn test_format() {
-        let entry = FiveWsEntry::new("ingi", "logged in", "2020-12-14T15:43:32", "", "");
-        assert_eq!(entry.to_string(), "ingi|logged in|2020-12-14T15:43:32||");
+        let entry = FiveWsEntry::new("name", "logged in", "2020-12-14T15:43:32", "", "");
+        assert_eq!(entry.to_string(), "name|logged in|2020-12-14T15:43:32||");
 
         let entry = FiveWsEntry::new(
-            "ingi",
+            "name",
             "Access Denied",
             "2020-12-14T15:43:32",
             "System::Login",
@@ -74,7 +74,7 @@ mod tests {
         );
         assert_eq!(
             entry.to_string(),
-            "ingi|Access Denied|2020-12-14T15:43:32|System::Login|Username or password was incorrect"
+            "name|Access Denied|2020-12-14T15:43:32|System::Login|Username or password was incorrect"
         );
 
         let entry = FiveWsEntry::new("", "", "", "", "");
@@ -87,20 +87,20 @@ mod tests {
     #[test]
     fn test_like_who() {
         let entry = FiveWsEntry::new(
-            "ingi",
+            "name",
             "Access Denied",
             "2020-12-14T15:43:32",
             "System::Login",
             "Username or password was incorrect",
         );
 
-        assert_eq!(true, entry.like("who", "ingi"));
+        assert_eq!(true, entry.like("who", "name"));
     }
 
     #[test]
     fn test_like_what() {
         let entry = FiveWsEntry::new(
-            "ingi",
+            "name",
             "Access Denied",
             "2020-12-14T15:43:32",
             "System::Login",
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn test_like_when() {
         let entry = FiveWsEntry::new(
-            "ingi",
+            "name",
             "Access Denied",
             "2020-12-14T15:43:32",
             "System::Login",
@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn test_like_where() {
         let entry = FiveWsEntry::new(
-            "ingi",
+            "name",
             "Access Denied",
             "2020-12-14T15:43:32",
             "System::Login",
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn test_like_why() {
         let entry = FiveWsEntry::new(
-            "ingi",
+            "name",
             "Access Denied",
             "2020-12-14T15:43:32",
             "System::Login",
@@ -151,6 +151,9 @@ mod tests {
         assert_eq!(true, entry.like("why", "username"));
         assert_eq!(true, entry.like("why", "password"));
         assert_eq!(true, entry.like("why", "Username or password"));
-        assert_eq!(false, entry.like("why", "Usename or password was incorrect"));
+        assert_eq!(
+            false,
+            entry.like("why", "Usename or password was incorrect")
+        );
     }
 }
