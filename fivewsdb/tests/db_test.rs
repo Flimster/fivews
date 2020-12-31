@@ -1,6 +1,6 @@
-use std::thread;
 use std::fmt::Display;
 use std::sync::{Arc, RwLock};
+use std::thread;
 
 use fivewsdb::db::*;
 
@@ -28,7 +28,9 @@ fn test_database_init() {
     teardown(TESTS_DIR_PATH);
 }
 #[test]
-#[should_panic(expected = "Unable to initialize lowiq database: No such file or directory (os error 2)")]
+#[should_panic(
+    expected = "Unable to initialize lowiq database: No such file or directory (os error 2)"
+)]
 fn test_database_invalid_init() {
     let _ = FiveWsDB::new("");
     // No need to teardown if the database fails to intialize

@@ -11,6 +11,7 @@ pub type DbResult<T> = std::result::Result<T, DbError>;
 
 const PAGE_SIZE: u64 = 4096;
 
+///
 #[derive(Error, Debug)]
 pub enum DbError {
     #[error("failed to initialize database: `{0}`")]
@@ -27,45 +28,89 @@ pub enum DbError {
 
 pub struct FiveWsDB {
     wal: WAL,
-    db: Vec<FiveWsEntry>,
+    storage: Vec<FiveWsEntry>,
     path: String,
     checkpoint: usize,
 }
 
-// TODO: Move initialization of files to here
 impl FiveWsDB {
+    /// Returns a FiveWsDB instance
+    ///
+    /// # Panics
+    ///
+    /// The function will panic if the given `dir_path` argument is not a valid path
+    ///
+    ///  # Examples
+    ///
+    /// ```
+    /// use fivewsdb::db::FiveWsDB;
+    ///
+    /// let db = FiveWsDB::new("./db_path");
+    /// ```
+    ///
     pub fn new(dir_path: &str) -> FiveWsDB {
         let checkpoint = init_lidb(dir_path);
+        let checkpoint_file_path = format!("{}/checkpoint{}.lidb", dir_path, checkpoint);
+        let mut storage =
+            init_from_checkpoint(checkpoint_file_path).expect("Failed to initialize database");
+
         let log_location = format!("{}/log{}.lidb", dir_path, checkpoint);
-        let checkpoint_location = format!("{}/checkpoint{}.lidb", dir_path, checkpoint);
 
         let wal = WAL::new(log_location);
-        let logs = wal.get_logs();
-        let db = init_in_memory_structure(checkpoint_location, logs).expect("Failed to initialize database");
+
+        let log_entries: Vec<FiveWsEntry> = wal
+            .get_logs()
+            .iter()
+            .map(|entry| entry.to_owned())
+            .collect();
+        storage.extend(log_entries);
 
         let path = dir_path.to_string();
 
         FiveWsDB {
             wal,
-            db,
+            storage,
             path,
             checkpoint,
         }
     }
 
-    // Returns the size of the current wal log
-    pub fn update<T: Into<String>>(&mut self, who: T, what: T, when: T, r#where: T, why: T) -> DbResult<()> {
+    // TODO: Neds a much better documentation
+    /// Updates the database instance with a new log line created from the arguments and returns the result of the operation
+    ///
+    /// As long as all arguments implemnt `Into<String>`, the database instance will
+    /// Starts by writing to the write-ahead log (WAL) and then updates the internal storage
+    /// If the WAL size has exceeded 4 KB (page size), then a checkpoint is created using the `create_checkpoint` function
+    ///
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fivewsdb::db::*;
+    /// let mut db = FiveWsDB::new("./db_path");
+    /// db.update("User123", "Access Denied", "2020-12-30T09:28:57Z", "Login page", "Wrong username or password").expect("Failed to update the database");
+    /// ```
+    pub fn update<T: Into<String>>(
+        &mut self,
+        who: T,
+        what: T,
+        when: T,
+        r#where: T,
+        why: T,
+    ) -> DbResult<()> {
         let entry = FiveWsEntry::new(who, what, when, r#where, why);
         let current_wal_size = self.wal.write(&entry).map_err(|_| DbError::WriteError)?;
-        self.db.push(entry);
+        self.storage.push(entry);
         if current_wal_size >= PAGE_SIZE {
-            self.create_checkpoint().map_err(|_| DbError::CheckpointError)?;
+            self.create_checkpoint()
+                .map_err(|_| DbError::CheckpointError)?;
         }
 
         Ok(())
     }
 
-    // TODO: Refactor this function and remove all unwraps
+    // TODO: Must test this function more as there are various things that can go wrong
+    //
     pub fn create_checkpoint(&mut self) -> std::io::Result<()> {
         let entries = self.read("*");
         let f = fs::File::create("tmp")?;
@@ -79,7 +124,7 @@ impl FiveWsDB {
         fs::remove_file(format!("{}/checkpoint{}.lidb", self.path, self.checkpoint))?;
 
         let log_file_location = format!("{}/log{}.lidb", self.path, self.checkpoint + 1);
-        let _ = fs::File::create(&log_file_location)?;
+        fs::File::create(&log_file_location)?;
         fs::remove_file(format!("{}/log{}.lidb", self.path, self.checkpoint))?;
 
         let mut meta_file = fs::File::create("tmp")?;
@@ -97,7 +142,7 @@ impl FiveWsDB {
     }
 
     pub fn read(&self, pattern: &str) -> Vec<FiveWsEntry> {
-        self.db
+        self.storage
             .iter()
             .filter(|x| {
                 pattern == "*"
@@ -112,27 +157,18 @@ impl FiveWsDB {
     }
 }
 
-fn init_in_memory_structure(
-    checkpoint_location: String,
-    logs: Vec<(String, FiveWsEntry)>,
-) -> DbResult<Vec<FiveWsEntry>> {
-    let mut db = Vec::new();
-    let checkpoint_file = std::fs::File::open(checkpoint_location).map_err(|e| DbError::InitError(e.to_string()))?;
+// fn init_from_checkpoint(checkpoint_location: String) -> DbResult<Vec<FiveWsEntry>> {
+fn init_from_checkpoint(checkpoint_file_path: String) -> std::io::Result<Vec<FiveWsEntry>> {
+    let mut storage = Vec::new();
+    let checkpoint_file = std::fs::File::open(checkpoint_file_path)?;
     let reader = BufReader::new(checkpoint_file);
 
     // Initalizing from checkpoint file
     for l in reader.lines() {
-        let l = l.map_err(|e| DbError::InitError(e.to_string()))?;
+        let l = l?;
         let vec: Vec<&str> = l.split("|").collect();
-        db.push(FiveWsEntry::from(vec));
+        storage.push(FiveWsEntry::from(vec));
     }
 
-    // Intializing from logs
-    for (op, entry) in logs {
-        if op == "WRITE" {
-            db.push(entry);
-        }
-    }
-
-    Ok(db)
+    Ok(storage)
 }
