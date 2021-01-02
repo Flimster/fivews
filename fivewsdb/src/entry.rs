@@ -1,17 +1,17 @@
 use std::fmt;
 
-#[derive(Debug, Clone)]
-pub struct FiveWsEntry {
-    who: String,
-    what: String,
-    when: String,
-    r#where: String,
-    why: String,
+#[derive(Clone)]
+pub struct LogEntry {
+    pub who: String,
+    pub what: String,
+    pub when: String,
+    pub r#where: String,
+    pub why: String,
 }
 
-impl FiveWsEntry {
-    pub fn new<T: Into<String>>(who: T, what: T, when: T, r#where: T, why: T) -> FiveWsEntry {
-        FiveWsEntry {
+impl LogEntry {
+    pub fn new<T: Into<String>>(who: T, what: T, when: T, r#where: T, why: T) -> LogEntry {
+        LogEntry {
             who: who.into(),
             what: what.into(),
             when: when.into(),
@@ -20,11 +20,11 @@ impl FiveWsEntry {
         }
     }
 
-    pub fn from<T>(v: Vec<T>) -> FiveWsEntry
+    pub fn from<T>(v: Vec<T>) -> LogEntry
     where
         T: Into<String> + Copy,
     {
-        FiveWsEntry {
+        LogEntry {
             who: v[0].into(),
             what: v[1].into(),
             when: v[2].into(),
@@ -46,7 +46,7 @@ impl FiveWsEntry {
     }
 }
 
-impl fmt::Display for FiveWsEntry {
+impl fmt::Display for LogEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -62,10 +62,10 @@ mod tests {
 
     #[test]
     fn test_format() {
-        let entry = FiveWsEntry::new("name", "logged in", "2020-12-14T15:43:32", "", "");
+        let entry = LogEntry::new("name", "logged in", "2020-12-14T15:43:32", "", "");
         assert_eq!(entry.to_string(), "name|logged in|2020-12-14T15:43:32||");
 
-        let entry = FiveWsEntry::new(
+        let entry = LogEntry::new(
             "name",
             "Access Denied",
             "2020-12-14T15:43:32",
@@ -77,16 +77,16 @@ mod tests {
             "name|Access Denied|2020-12-14T15:43:32|System::Login|Username or password was incorrect"
         );
 
-        let entry = FiveWsEntry::new("", "", "", "", "");
+        let entry = LogEntry::new("", "", "", "", "");
         assert_eq!(entry.to_string(), "||||");
 
-        let entry = FiveWsEntry::new("", "", "", "", "Why");
+        let entry = LogEntry::new("", "", "", "", "Why");
         assert_eq!(entry.to_string(), "||||Why");
     }
 
     #[test]
     fn test_like_who() {
-        let entry = FiveWsEntry::new(
+        let entry = LogEntry::new(
             "name",
             "Access Denied",
             "2020-12-14T15:43:32",
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_like_what() {
-        let entry = FiveWsEntry::new(
+        let entry = LogEntry::new(
             "name",
             "Access Denied",
             "2020-12-14T15:43:32",
@@ -112,7 +112,7 @@ mod tests {
 
     #[test]
     fn test_like_when() {
-        let entry = FiveWsEntry::new(
+        let entry = LogEntry::new(
             "name",
             "Access Denied",
             "2020-12-14T15:43:32",
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_like_where() {
-        let entry = FiveWsEntry::new(
+        let entry = LogEntry::new(
             "name",
             "Access Denied",
             "2020-12-14T15:43:32",
@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_like_why() {
-        let entry = FiveWsEntry::new(
+        let entry = LogEntry::new(
             "name",
             "Access Denied",
             "2020-12-14T15:43:32",
@@ -151,9 +151,6 @@ mod tests {
         assert_eq!(true, entry.like("why", "username"));
         assert_eq!(true, entry.like("why", "password"));
         assert_eq!(true, entry.like("why", "Username or password"));
-        assert_eq!(
-            false,
-            entry.like("why", "Usename or password was incorrect")
-        );
+        assert_eq!(false, entry.like("why", "Usename or password was incorrect"));
     }
 }

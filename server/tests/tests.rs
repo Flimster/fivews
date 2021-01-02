@@ -1,6 +1,6 @@
 use fivewsdb::db::FiveWsDB;
-use fivews_server::models::*;
-use fivews_server::paths::create_paths;
+use server::models::*;
+use server::paths::create_paths;
 
 use warp::http::StatusCode;
 use warp::test::request;
@@ -37,21 +37,17 @@ async fn test_server_update() {
 
 #[tokio::test]
 async fn test_server_read() {
-
     let mut db = FiveWsDB::new("./test_read_db");
 
     db.update("w", "w", "w", "w", "w").unwrap();
     db.update("w", "w", "w", "w", "w").unwrap();
 
     let paths = create_paths(db);
-    let res  = request()
-        .method("GET")
-        .path("/read?query=*")
-        .reply(&paths)
-        .await;
+    let res = request().method("GET").path("/read?query=*").reply(&paths).await;
 
     assert_eq!(res.status(), StatusCode::OK);
+    let entries: Vec<LogEntry> = serde_json::from_slice(&res.body()).unwrap();
+    assert_eq!(entries.len(), 2);
 
     teardown("./test_read_db");
-    
 }

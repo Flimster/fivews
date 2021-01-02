@@ -3,7 +3,7 @@
 use std::fs;
 use std::io::{self, prelude::*, BufReader};
 
-use crate::entry::FiveWsEntry;
+use crate::entry::LogEntry;
 
 // Write ahead logger
 pub struct WAL {
@@ -23,20 +23,20 @@ impl WAL {
     }
 
     // Returns the size of the write-ahead file
-    pub fn write(&mut self, entry: &FiveWsEntry) -> io::Result<u64> {
+    pub fn write(&mut self, entry: &LogEntry) -> io::Result<u64> {
         self.f.write_all(format!("{}\n", entry).as_bytes())?;
         let length = self.f.metadata()?.len();
         Ok(length)
     }
 
-    pub fn get_logs(&self) -> Vec<FiveWsEntry> {
+    pub fn get_logs(&self) -> Vec<LogEntry> {
         let reader = BufReader::new(&self.f);
 
         reader
             .lines()
             .map(|l| l.unwrap_or_default())
             .filter(|l| !l.is_empty())
-            .map(|l| FiveWsEntry::from(l.split("|").collect()))
+            .map(|l| LogEntry::from(l.split("|").collect()))
             .collect()
     }
 }

@@ -3,7 +3,7 @@ use std::io::{prelude::*, BufReader, BufWriter};
 
 use thiserror::Error;
 
-use crate::entry::FiveWsEntry;
+use crate::entry::LogEntry;
 use crate::init::init_lidb;
 use crate::wal::WAL;
 
@@ -28,7 +28,7 @@ pub enum DbError {
 
 pub struct FiveWsDB {
     wal: WAL,
-    storage: Vec<FiveWsEntry>,
+    storage: Vec<LogEntry>,
     path: String,
     checkpoint: usize,
 }
@@ -51,18 +51,13 @@ impl FiveWsDB {
     pub fn new(dir_path: &str) -> FiveWsDB {
         let checkpoint = init_lidb(dir_path);
         let checkpoint_file_path = format!("{}/checkpoint{}.lidb", dir_path, checkpoint);
-        let mut storage =
-            init_from_checkpoint(checkpoint_file_path).expect("Failed to initialize database");
+        let mut storage = init_from_checkpoint(checkpoint_file_path).expect("Failed to initialize database");
 
         let log_location = format!("{}/log{}.lidb", dir_path, checkpoint);
 
         let wal = WAL::new(log_location);
 
-        let log_entries: Vec<FiveWsEntry> = wal
-            .get_logs()
-            .iter()
-            .map(|entry| entry.to_owned())
-            .collect();
+        let log_entries: Vec<LogEntry> = wal.get_logs().iter().map(|entry| entry.to_owned()).collect();
         storage.extend(log_entries);
 
         let path = dir_path.to_string();
@@ -90,20 +85,12 @@ impl FiveWsDB {
     /// let mut db = FiveWsDB::new("./db_path");
     /// db.update("User123", "Access Denied", "2020-12-30T09:28:57Z", "Login page", "Wrong username or password").expect("Failed to update the database");
     /// ```
-    pub fn update<T: Into<String>>(
-        &mut self,
-        who: T,
-        what: T,
-        when: T,
-        r#where: T,
-        why: T,
-    ) -> DbResult<()> {
-        let entry = FiveWsEntry::new(who, what, when, r#where, why);
+    pub fn update<T: Into<String>>(&mut self, who: T, what: T, when: T, r#where: T, why: T) -> DbResult<()> {
+        let entry = LogEntry::new(who, what, when, r#where, why);
         let current_wal_size = self.wal.write(&entry).map_err(|_| DbError::WriteError)?;
         self.storage.push(entry);
         if current_wal_size >= PAGE_SIZE {
-            self.create_checkpoint()
-                .map_err(|_| DbError::CheckpointError)?;
+            self.create_checkpoint().map_err(|_| DbError::CheckpointError)?;
         }
 
         Ok(())
@@ -141,7 +128,7 @@ impl FiveWsDB {
         Ok(())
     }
 
-    pub fn read(&self, pattern: &str) -> Vec<FiveWsEntry> {
+    pub fn read(&self, pattern: &str) -> Vec<LogEntry> {
         self.storage
             .iter()
             .filter(|x| {
@@ -157,8 +144,8 @@ impl FiveWsDB {
     }
 }
 
-// fn init_from_checkpoint(checkpoint_location: String) -> DbResult<Vec<FiveWsEntry>> {
-fn init_from_checkpoint(checkpoint_file_path: String) -> std::io::Result<Vec<FiveWsEntry>> {
+// fn init_from_checkpoint(checkpoint_location: String) -> DbResult<Vec<LogEntry>> {
+fn init_from_checkpoint(checkpoint_file_path: String) -> std::io::Result<Vec<LogEntry>> {
     let mut storage = Vec::new();
     let checkpoint_file = std::fs::File::open(checkpoint_file_path)?;
     let reader = BufReader::new(checkpoint_file);
@@ -167,7 +154,7 @@ fn init_from_checkpoint(checkpoint_file_path: String) -> std::io::Result<Vec<Fiv
     for l in reader.lines() {
         let l = l?;
         let vec: Vec<&str> = l.split("|").collect();
-        storage.push(FiveWsEntry::from(vec));
+        storage.push(LogEntry::from(vec));
     }
 
     Ok(storage)

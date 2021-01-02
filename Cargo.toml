@@ -1,6 +1,5 @@
 [workspace]
-
 members = [
     "fivewsdb",
-    "fivews_server",
+    "server",
 ]

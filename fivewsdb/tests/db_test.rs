@@ -28,9 +28,7 @@ fn test_database_init() {
     teardown(TESTS_DIR_PATH);
 }
 #[test]
-#[should_panic(
-    expected = "Unable to initialize lowiq database: No such file or directory (os error 2)"
-)]
+#[should_panic(expected = "Unable to initialize lowiq database: No such file or directory (os error 2)")]
 fn test_database_invalid_init() {
     let _ = FiveWsDB::new("");
     // No need to teardown if the database fails to intialize
@@ -50,12 +48,9 @@ fn test_database_init_twice() {
 fn test_database_update() {
     let mut db = FiveWsDB::new(TESTS_DIR_PATH);
 
-    db.update("Ingi", "Job start", "2020-20-12", "", "")
-        .unwrap();
-    db.update("IT guy", "Job start", "2020-20-12", "", "")
-        .unwrap();
-    db.update("Office guy", "Job start", "2020-20-12", "", "")
-        .unwrap();
+    db.update("Ingi", "Job start", "2020-20-12", "", "").unwrap();
+    db.update("IT guy", "Job start", "2020-20-12", "", "").unwrap();
+    db.update("Office guy", "Job start", "2020-20-12", "", "").unwrap();
 
     let entries = db.read("Ingi");
 

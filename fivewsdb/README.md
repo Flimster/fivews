@@ -10,6 +10,8 @@ The database only has 5 columns which should suffice any logging requirements
 - Where
 - Why
 
+2PL (two phase locking)
+
 ### Who
 
 Who did it (Carl, Sensor:3235, etc.)
